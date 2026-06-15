@@ -121,16 +121,105 @@ document.addEventListener('DOMContentLoaded', () => {
     // LocalStorage keys
     const STORAGE_KEY = 'ecosphere_user_state';
 
+    // Cache DOM Elements for Efficiency
+    const hdrCurrentVal = document.getElementById('hdr-current-val');
+    const hdrReductionVal = document.getElementById('hdr-reduction-val');
+    const lblTotalFootprint = document.getElementById('lbl-total-footprint');
+    const lblProjectedFootprint = document.getElementById('lbl-projected-footprint');
+    const barCompare = document.getElementById('bar-footprint-compare');
+    const pctDiff = document.getElementById('lbl-percentage-diff');
+    const lblCommitmentPercentage = document.getElementById('lbl-commitment-percentage');
+    const barCommitmentProgress = document.getElementById('bar-commitment-progress');
+    const lblCommitmentStatus = document.getElementById('lbl-commitment-status');
+    const lblDynamicTip = document.getElementById('lbl-dynamic-tip');
+    
+    const simTemp = document.getElementById('sim-temp-val');
+    const simSea = document.getElementById('sim-sea-val');
+    const simWeather = document.getElementById('sim-weather-val');
+    const simUserScore = document.getElementById('sim-user-score');
+    const simGlobalOutput = document.getElementById('sim-global-output');
+    const simBudgetStatus = document.getElementById('sim-budget-status');
+    const simAlertBox = document.getElementById('sim-alert-box');
+    const simAlertTitle = document.getElementById('sim-alert-title');
+    const simAlertDesc = document.getElementById('sim-alert-desc');
+    
+    const actionsGridContainer = document.getElementById('actions-grid-container');
+    const badgesGridContainer = document.getElementById('badges-grid-container');
+    const sidebarRank = document.getElementById('txt-user-rank');
+    const miniBadgeIcon = document.getElementById('mini-badge-icon');
+
     // -------------------------------------------------------------
-    // 2. LOAD CACHED STATE
+    // 2. LOAD AND SANITIZE CACHED STATE
     // -------------------------------------------------------------
+    function validateAndSanitizeState(parsed) {
+        if (!parsed || typeof parsed !== 'object') return null;
+        
+        const validatedInputs = {};
+        const defaults = {
+            carKm: 150,
+            carType: 'petrol',
+            flights: 10,
+            transit: 50,
+            electricity: 300,
+            cleanEnergy: 0,
+            heatingGas: 80,
+            heatingOil: 0,
+            diet: 'heavy-meat',
+            organic: 20,
+            clothing: 20,
+            electronics: 2,
+            recycling: 30
+        };
+
+        const validCarTypes = ['petrol', 'diesel', 'hybrid', 'electric'];
+        const validDiets = ['heavy-meat', 'mod-meat', 'vegetarian', 'vegan'];
+
+        // Validate inputs
+        if (parsed.inputs && typeof parsed.inputs === 'object') {
+            for (const key in defaults) {
+                const val = parsed.inputs[key];
+                if (key === 'carType') {
+                    validatedInputs.carType = validCarTypes.includes(val) ? val : defaults.carType;
+                } else if (key === 'diet') {
+                    validatedInputs.diet = validDiets.includes(val) ? val : defaults.diet;
+                } else {
+                    const num = Number(val);
+                    validatedInputs[key] = (!isNaN(num) && num >= 0) ? num : defaults[key];
+                }
+            }
+        } else {
+            return null;
+        }
+
+        // Validate commitments
+        let validatedCommitments = [];
+        if (Array.isArray(parsed.commitments)) {
+            const validActionIds = actionsData.map(a => a.id);
+            validatedCommitments = parsed.commitments.filter(id => validActionIds.includes(id));
+        }
+
+        // Validate simAdoption
+        let validatedSimAdoption = 100;
+        if (parsed.simAdoption !== undefined) {
+            const num = Number(parsed.simAdoption);
+            validatedSimAdoption = (!isNaN(num) && num >= 0 && num <= 100) ? num : 100;
+        }
+
+        return {
+            inputs: validatedInputs,
+            commitments: validatedCommitments,
+            simAdoption: validatedSimAdoption
+        };
+    }
+
     function loadSavedState() {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             try {
                 const parsed = JSON.parse(saved);
-                if (parsed && parsed.inputs) {
-                    state = parsed;
+                const sanitized = validateAndSanitizeState(parsed);
+                if (sanitized) {
+                    state = sanitized;
                 }
             } catch (e) {
                 console.error("Failed to load local storage state: ", e);
@@ -144,6 +233,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize application state
     loadSavedState();
+
 
     // -------------------------------------------------------------
     // 3. UI TAB NAVIGATION
@@ -253,10 +343,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Disable/enable prev/next button controls
         btnCalcPrev.disabled = stepNum === 1;
+        btnCalcNext.textContent = '';
         if (stepNum === 4) {
-            btnCalcNext.innerHTML = 'Go to Dashboard <i class="fa-solid fa-square-check"></i>';
+            btnCalcNext.appendChild(document.createTextNode('Go to Dashboard '));
+            const icon = document.createElement('i');
+            icon.className = 'fa-solid fa-square-check';
+            btnCalcNext.appendChild(icon);
         } else {
-            btnCalcNext.innerHTML = 'Next <i class="fa-solid fa-arrow-right"></i>';
+            btnCalcNext.appendChild(document.createTextNode('Next '));
+            const icon = document.createElement('i');
+            icon.className = 'fa-solid fa-arrow-right';
+            btnCalcNext.appendChild(icon);
         }
     }
 
@@ -543,8 +640,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------
     // 8. RENDER DYNAMIC ACTIONS PLANNER & CHECKS
     // -------------------------------------------------------------
-    const actionsGridContainer = document.getElementById('actions-grid-container');
-
     function renderActionPlanner() {
         if (!actionsGridContainer) return;
         actionsGridContainer.textContent = ''; // Safe clear
@@ -664,33 +759,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const weatherRiskPct = Math.round((tempRise - 1.0) * 35);
 
         // DOM elements update
-        const simTemp = document.getElementById('sim-temp-val');
-        const simSea = document.getElementById('sim-sea-val');
-        const simWeather = document.getElementById('sim-weather-val');
-        
         if (simTemp) simTemp.textContent = `+${tempRise.toFixed(1)}°C`;
         if (simSea) simSea.textContent = `${seaLevelRiseCm} cm`;
         if (simWeather) simWeather.textContent = `+${weatherRiskPct}%`;
 
         // Update colors based on thresholds
-        if (tempRise > 2.5) {
-            simTemp.className = 'dial-value text-red';
-            simSea.className = 'dial-value text-red';
-        } else if (tempRise > 1.8) {
-            simTemp.className = 'dial-value text-amber';
-            simSea.className = 'dial-value text-amber';
-        } else {
-            simTemp.className = 'dial-value text-emerald';
-            simSea.className = 'dial-value text-emerald';
+        if (simTemp) {
+            if (tempRise > 2.5) simTemp.className = 'dial-value text-red';
+            else if (tempRise > 1.8) simTemp.className = 'dial-value text-amber';
+            else simTemp.className = 'dial-value text-emerald';
+        }
+        if (simSea) {
+            if (tempRise > 2.5) simSea.className = 'dial-value text-red';
+            else if (tempRise > 1.8) simSea.className = 'dial-value text-amber';
+            else simSea.className = 'dial-value text-emerald';
         }
 
         // Info table bindings
-        const simUserScore = document.getElementById('sim-user-score');
-        const simGlobalOutput = document.getElementById('sim-global-output');
-        const simBudgetStatus = document.getElementById('sim-budget-status');
-        const simAlertBox = document.getElementById('sim-alert-box');
-        const simAlertTitle = document.getElementById('sim-alert-title');
-        const simAlertDesc = document.getElementById('sim-alert-desc');
 
         if (simUserScore) simUserScore.textContent = `${currentTotalTonnes.toFixed(2)} t CO₂e/yr`;
         if (simGlobalOutput) simGlobalOutput.textContent = `${netGlobalOutput.toFixed(1)} Gt CO₂e`;
@@ -722,11 +807,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     }
-
-    // -------------------------------------------------------------
-    // 10. ACHIEVEMENTS & GAMIFICATION
-    // -------------------------------------------------------------
-    const badgesGridContainer = document.getElementById('badges-grid-container');
 
     function checkBadges(currentTotalTonnes, projectedTotalTonnes) {
         const inputs = state.inputs;
@@ -797,8 +877,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Update rank in sidebar
-        const sidebarRank = document.getElementById('txt-user-rank');
-        const miniBadgeIcon = document.getElementById('mini-badge-icon');
         const count = unlockedIds.length;
         
         let rankName = 'Eco Initiate';
@@ -844,19 +922,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const projectedTotalTonnes = Math.max(0.4, currentTotalTonnes - savingsTonnes);
 
         // Update headers & summaries
-        const hdrCurrentVal = document.getElementById('hdr-current-val');
-        const hdrReductionVal = document.getElementById('hdr-reduction-val');
-        const lblTotalFootprint = document.getElementById('lbl-total-footprint');
-        const lblProjectedFootprint = document.getElementById('lbl-projected-footprint');
-        
         if (hdrCurrentVal) hdrCurrentVal.textContent = `${currentTotalTonnes.toFixed(2)} t`;
         if (hdrReductionVal) hdrReductionVal.textContent = `${savingsTonnes.toFixed(2)} t`;
         if (lblTotalFootprint) lblTotalFootprint.textContent = currentTotalTonnes.toFixed(2);
         if (lblProjectedFootprint) lblProjectedFootprint.textContent = `${projectedTotalTonnes.toFixed(2)} t`;
 
         // Footprint target bar comparing with sustainable target (2.0t)
-        const barCompare = document.getElementById('bar-footprint-compare');
-        const pctDiff = document.getElementById('lbl-percentage-diff');
         if (barCompare && pctDiff) {
             // Set 10 tonnes as the visual 100% capacity limit of the bar
             const fillPct = Math.min(100, (currentTotalTonnes / 10) * 100);
@@ -875,9 +946,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Commitments targets and milestones text
-        const lblCommitmentPercentage = document.getElementById('lbl-commitment-percentage');
-        const barCommitmentProgress = document.getElementById('bar-commitment-progress');
-        const lblCommitmentStatus = document.getElementById('lbl-commitment-status');
 
         if (lblCommitmentPercentage && barCommitmentProgress && lblCommitmentStatus) {
             // Carbon offset progress calculation: how much did we cut to reach target?
@@ -904,7 +972,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         // Advice generator text
-        const lblDynamicTip = document.getElementById('lbl-dynamic-tip');
         if (lblDynamicTip) {
             // Find highest emission category
             const cats = [

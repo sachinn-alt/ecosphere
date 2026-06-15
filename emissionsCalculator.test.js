@@ -116,4 +116,54 @@ describe('Carbon Footprint Calculator Math model tests', () => {
         // Car: 200 * 52 * 0.05 = 520 kg
         expect(result.transport).toBeCloseTo(520, 1);
     });
+
+    test('Zero inputs yield baseline lifestyle and diet emissions', () => {
+        const zeroInputs = {
+            carKm: 0,
+            carType: 'petrol',
+            flights: 0,
+            transit: 0,
+            electricity: 0,
+            cleanEnergy: 0,
+            heatingGas: 0,
+            heatingOil: 0,
+            diet: 'vegan',
+            organic: 0,
+            clothing: 0,
+            electronics: 0,
+            recycling: 0
+        };
+
+        const result = calculateEmissions(zeroInputs);
+        expect(result.transport).toBe(0);
+        expect(result.energy).toBe(0);
+        expect(result.diet).toBe(900); // base vegan diet
+        expect(result.lifestyle).toBe(400); // services base
+        expect(result.total).toBe(1300);
+    });
+
+    test('Undefined or partial inputs fail safe with defaults', () => {
+        const result = calculateEmissions(null);
+        // Should fallback to heavy-meat (2500) + lifestyle base (400) = 2900 kg total
+        expect(result.transport).toBe(0);
+        expect(result.energy).toBe(0);
+        expect(result.diet).toBe(2500);
+        expect(result.lifestyle).toBe(400);
+        expect(result.total).toBe(2900);
+    });
+
+    test('Validates organic and recycling discount boundaries', () => {
+        const overLimitInputs = {
+            diet: 'vegan',
+            organic: 150, // above 100%
+            clothing: 0,
+            electronics: 0,
+            recycling: 200 // above 100%
+        };
+        const result = calculateEmissions(overLimitInputs);
+        // organic discount should be capped at 10% (organicOffset clamped at 1.0)
+        expect(result.diet).toBe(810); // 900 * 0.9
+        // recycling discount should be capped at 25% (recyclingOffset clamped at 1.0)
+        expect(result.lifestyle).toBe(300); // 400 * 0.75
+    });
 });
