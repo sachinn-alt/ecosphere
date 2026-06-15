@@ -1400,3 +1400,21 @@ h1, h2, h3, h4, h5, h6 {
         flex-shrink: 0;
     }
 }
+
+/* Accessibility Focus Ring and Contrast Enhancements */
+button:focus-visible, 
+input:focus-visible,
+.btn-toggle:focus-visible,
+.custom-slider:focus-visible {
+    outline: 2.5px solid var(--primary);
+    outline-offset: 3px;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+}
+
+.helper-text {
+    color: #a4b5cf !important; /* Enhanced contrast from var(--text-dark) */
+}
+.helper-text-under {
+    color: #8da2c4 !important; /* Enhanced contrast from var(--text-dark) */
+}
+

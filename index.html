@@ -16,6 +16,7 @@
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- App Logic -->
+    <script src="emissionsCalculator.js" defer></script>
     <script src="app.js" defer></script>
 </head>
 <body class="dark-theme">
@@ -211,14 +212,14 @@
                                     <div class="form-group">
                                         <label for="range-car-km">Car Mileage (KM per week)</label>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-car-km" min="0" max="1000" value="150" class="custom-slider">
+                                            <input type="range" id="range-car-km" min="0" max="1000" value="150" class="custom-slider" aria-label="Car mileage in kilometers per week">
                                             <span class="slider-display-val" id="val-car-km">150 km</span>
                                         </div>
                                     </div>
 
                                     <div class="form-group" id="group-car-type">
                                         <label>Car Fuel/Power Type</label>
-                                        <div class="button-toggle-group">
+                                        <div class="button-toggle-group" role="group" aria-label="Car fuel power type selection">
                                             <button type="button" class="btn-toggle active" data-value="petrol" id="btn-car-petrol">Petrol</button>
                                             <button type="button" class="btn-toggle" data-value="diesel" id="btn-car-diesel">Diesel</button>
                                             <button type="button" class="btn-toggle" data-value="hybrid" id="btn-car-hybrid">Hybrid</button>
@@ -230,7 +231,7 @@
                                         <label for="range-flights">Annual Flight Duration (Hours)</label>
                                         <p class="helper-text">Include short and long-haul flights combined.</p>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-flights" min="0" max="100" value="10" class="custom-slider">
+                                            <input type="range" id="range-flights" min="0" max="100" value="10" class="custom-slider" aria-label="Annual flight duration in hours">
                                             <span class="slider-display-val" id="val-flights">10 hrs</span>
                                         </div>
                                     </div>
@@ -239,7 +240,7 @@
                                         <label for="range-transit">Public Transport (KM per week)</label>
                                         <p class="helper-text">Buses, subways, and commuter trains.</p>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-transit" min="0" max="500" value="50" class="custom-slider">
+                                            <input type="range" id="range-transit" min="0" max="500" value="50" class="custom-slider" aria-label="Public transport distance in kilometers per week">
                                             <span class="slider-display-val" id="val-transit">50 km</span>
                                         </div>
                                     </div>
@@ -253,7 +254,7 @@
                                     <div class="form-group">
                                         <label for="range-electricity">Electricity Consumption (kWh per month)</label>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-electricity" min="0" max="1500" value="300" class="custom-slider">
+                                            <input type="range" id="range-electricity" min="0" max="1500" value="300" class="custom-slider" aria-label="Electricity consumption in kilowatt hours per month">
                                             <span class="slider-display-val" id="val-electricity">300 kWh</span>
                                         </div>
                                     </div>
@@ -262,7 +263,7 @@
                                         <label for="range-clean-energy">Clean / Renewable Energy Share (%)</label>
                                         <p class="helper-text">Electricity derived from rooftop solar or green power programs.</p>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-clean-energy" min="0" max="100" value="0" class="custom-slider">
+                                            <input type="range" id="range-clean-energy" min="0" max="100" value="0" class="custom-slider" aria-label="Clean or renewable energy percentage share">
                                             <span class="slider-display-val" id="val-clean-energy">0%</span>
                                         </div>
                                     </div>
@@ -270,7 +271,7 @@
                                     <div class="form-group">
                                         <label for="range-heating-gas">Heating Natural Gas (m³ per month)</label>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-heating-gas" min="0" max="500" value="80" class="custom-slider">
+                                            <input type="range" id="range-heating-gas" min="0" max="500" value="80" class="custom-slider" aria-label="Heating natural gas consumption in cubic meters per month">
                                             <span class="slider-display-val" id="val-heating-gas">80 m³</span>
                                         </div>
                                     </div>
@@ -278,7 +279,7 @@
                                     <div class="form-group">
                                         <label for="range-heating-oil">Heating Oil/LPG (Liters per month)</label>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-heating-oil" min="0" max="300" value="0" class="custom-slider">
+                                            <input type="range" id="range-heating-oil" min="0" max="300" value="0" class="custom-slider" aria-label="Heating oil or LPG consumption in liters per month">
                                             <span class="slider-display-val" id="val-heating-oil">0 L</span>
                                         </div>
                                     </div>
@@ -291,7 +292,7 @@
 
                                     <div class="form-group">
                                         <label>Primary Diet Style</label>
-                                        <div class="button-toggle-group flex-column">
+                                        <div class="button-toggle-group flex-column" role="group" aria-label="Diet style selection">
                                             <button type="button" class="btn-toggle flex-justify-start active" data-value="heavy-meat" id="btn-diet-heavy">
                                                 <i class="fa-solid fa-drumstick-bite margin-right"></i>
                                                 <div class="toggle-desc-wrapper">
@@ -327,7 +328,7 @@
                                         <label for="range-organic">Locally Sourced & Organic Share (%)</label>
                                         <p class="helper-text">Reduces food transport emissions and soil degradation.</p>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-organic" min="0" max="100" value="20" class="custom-slider">
+                                            <input type="range" id="range-organic" min="0" max="100" value="20" class="custom-slider" aria-label="Locally sourced and organic food percentage share">
                                             <span class="slider-display-val" id="val-organic">20%</span>
                                         </div>
                                     </div>
@@ -342,7 +343,7 @@
                                         <label for="range-clothing">New Clothes Purchased (Items per year)</label>
                                         <p class="helper-text">Fast fashion incurs high chemical, water, and carbon tolls.</p>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-clothing" min="0" max="100" value="20" class="custom-slider">
+                                            <input type="range" id="range-clothing" min="0" max="100" value="20" class="custom-slider" aria-label="Number of new clothes items purchased per year">
                                             <span class="slider-display-val" id="val-clothing">20 items</span>
                                         </div>
                                     </div>
@@ -351,7 +352,7 @@
                                         <label for="range-electronics">New Personal Electronics Purchased (Devices per year)</label>
                                         <p class="helper-text">Phones, computers, smart gadgets.</p>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-electronics" min="0" max="10" value="2" class="custom-slider">
+                                            <input type="range" id="range-electronics" min="0" max="10" value="2" class="custom-slider" aria-label="Number of new personal electronics devices purchased per year">
                                             <span class="slider-display-val" id="val-electronics">2 devices</span>
                                         </div>
                                     </div>
@@ -360,7 +361,7 @@
                                         <label for="range-recycling">Household Recycling Rate (%)</label>
                                         <p class="helper-text">How much of your paper, glass, metal, and plastic is recycled.</p>
                                         <div class="range-value-flex">
-                                            <input type="range" id="range-recycling" min="0" max="100" value="30" class="custom-slider">
+                                            <input type="range" id="range-recycling" min="0" max="100" value="30" class="custom-slider" aria-label="Household recycling rate percentage">
                                             <span class="slider-display-val" id="val-recycling">30%</span>
                                         </div>
                                     </div>
@@ -426,7 +427,7 @@
                                 <div class="form-group">
                                     <label for="range-sim-adoption">Global Adoption Percentage</label>
                                     <div class="range-value-flex">
-                                        <input type="range" id="range-sim-adoption" min="0" max="100" value="100" class="custom-slider">
+                                        <input type="range" id="range-sim-adoption" min="0" max="100" value="100" class="custom-slider" aria-label="Global adoption rate of your lifestyle percentage">
                                         <span class="slider-display-val" id="val-sim-adoption">100%</span>
                                     </div>
                                     <span class="helper-text-under">If 100% of humans live like you. If 0%, everyone reduces to the bare carbon footprint threshold.</span>

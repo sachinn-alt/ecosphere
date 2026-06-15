@@ -1,0 +1,14 @@
+{
+  "name": "ecosphere",
+  "version": "1.0.0",
+  "description": "EcoSphere Carbon Footprint Tracker Platform",
+  "main": "app.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "author": "Sachin Kumar Singh",
+  "license": "ISC"
+}

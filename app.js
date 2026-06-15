@@ -1,6 +1,29 @@
 // EcoSphere Carbon Footprint Awareness Platform - Application Logic
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Helpers for Security and Efficiency
+    function debounce(func, wait) {
+        let timeout;
+        return function(...args) {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(this, args), wait);
+        };
+    }
+
+    function setTipText(element, text) {
+        element.textContent = '';
+        const parts = text.split(/(<strong>.*?<\/strong>)/g);
+        parts.forEach(part => {
+            if (part.startsWith('<strong>') && part.endsWith('</strong>')) {
+                const strong = document.createElement('strong');
+                strong.textContent = part.slice(8, -9);
+                element.appendChild(strong);
+            } else {
+                element.appendChild(document.createTextNode(part));
+            }
+        });
+    }
+
     // -------------------------------------------------------------
     // 1. STATE MANAGEMENT
     // -------------------------------------------------------------
@@ -289,6 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    const debouncedRecalculate = debounce(recalculateAll, 100);
+
     // Attach listeners for range sliders
     inputsConfig.forEach(conf => {
         const el = document.getElementById(conf.id);
@@ -304,7 +329,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     state.inputs[conf.stateKey] = val;
                 }
                 
-                recalculateAll();
+                debouncedRecalculate();
                 saveCurrentState();
             });
         }
@@ -365,61 +390,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // -------------------------------------------------------------
     // 6. CARBON CALCULATION CORE MODEL
     // -------------------------------------------------------------
-    function calculateEmissions() {
-        const inputs = state.inputs;
-
-        // A. Transportation Emissions (kg CO2e / year)
-        // Fuel Emission factors: Petrol = 0.22 kg/km, Diesel = 0.25, Hybrid = 0.12, Electric = 0.05 (grid overhead)
-        let carFactor = 0.22;
-        if (inputs.carType === 'diesel') carFactor = 0.25;
-        else if (inputs.carType === 'hybrid') carFactor = 0.12;
-        else if (inputs.carType === 'electric') carFactor = 0.05;
-
-        const carEmissions = inputs.carKm * 52 * carFactor;
-        const flightEmissions = inputs.flights * 150; // 150 kg CO2e per flight hour
-        const transitEmissions = inputs.transit * 52 * 0.04; // 0.04 kg CO2e per km
-
-        const transportTotal = carEmissions + flightEmissions + transitEmissions;
-
-        // B. Home Energy (kg CO2e / year)
-        // Electricity: 0.40 kg / kWh, scaled down by clean energy percentage
-        const gridElectricityEmissions = (inputs.electricity * 12) * 0.40 * (1 - (inputs.cleanEnergy / 100));
-        // Gas heating: 2.0 kg / m3
-        const gasEmissions = inputs.heatingGas * 12 * 2.0;
-        // Oil heating: 2.5 kg / liter
-        const oilEmissions = inputs.heatingOil * 12 * 2.5;
-
-        const energyTotal = gridElectricityEmissions + gasEmissions + oilEmissions;
-
-        // C. Diet (kg CO2e / year)
-        let dietBase = 2500; // heavy meat
-        if (inputs.diet === 'mod-meat') dietBase = 1700;
-        else if (inputs.diet === 'vegetarian') dietBase = 1200;
-        else if (inputs.diet === 'vegan') dietBase = 900;
-
-        // Organic/Local discount: up to 10% discount off diet emissions
-        const organicDiscount = 1 - ((inputs.organic / 100) * 0.10);
-        const dietTotal = dietBase * organicDiscount;
-
-        // D. Lifestyle & Shopping (kg CO2e / year)
-        const clothesEmissions = inputs.clothing * 25; // 25 kg per clothing item
-        const electronicsEmissions = inputs.electronics * 150; // 150 kg per device upgrade
-        const miscEmissions = 400; // Base baseline footprint for waste, water, shipping overhead
-        const lifestyleBase = clothesEmissions + electronicsEmissions + miscEmissions;
-
-        // Recycling offset: reduces lifestyle footprint by up to 25%
-        const recyclingDiscount = 1 - ((inputs.recycling / 100) * 0.25);
-        const lifestyleTotal = lifestyleBase * recyclingDiscount;
-
-        // Return broken down values (in kg)
-        return {
-            transport: transportTotal,
-            energy: energyTotal,
-            diet: dietTotal,
-            lifestyle: lifestyleTotal,
-            total: transportTotal + energyTotal + dietTotal + lifestyleTotal
-        };
-    }
+    // (Delegated to external emissionsCalculator.js module)
 
     // -------------------------------------------------------------
     // 7. CHART.JS CONFIGURATION & CREATION
@@ -576,7 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderActionPlanner() {
         if (!actionsGridContainer) return;
-        actionsGridContainer.innerHTML = '';
+        actionsGridContainer.textContent = ''; // Safe clear
 
         actionsData.forEach(action => {
             const isCommitted = state.commitments.includes(action.id);
@@ -584,31 +555,67 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = `action-card ${isCommitted ? 'committed' : ''}`;
             card.id = `action-card-${action.id}`;
 
-            card.innerHTML = `
-                <div class="action-card-header">
-                    <span class="action-category-badge action-cat-${action.category}">${action.category}</span>
-                    <i class="fa-solid ${isCommitted ? 'fa-circle-check text-emerald' : 'fa-circle-plus text-dark'}"></i>
-                </div>
-                <div class="action-card-body">
-                    <h4 class="action-title">${action.title}</h4>
-                    <p class="action-desc">${action.desc}</p>
-                </div>
-                <div class="action-card-footer">
-                    <div class="action-impact">
-                        <span class="impact-lbl">Annual Savings</span>
-                        <span class="impact-val">-${(action.impact / 1000).toFixed(2)} t CO₂e</span>
-                    </div>
-                    <button class="btn-commit" data-action-id="${action.id}">
-                        ${isCommitted ? 'Committed' : 'Commit'}
-                    </button>
-                </div>
-            `;
+            // Header
+            const header = document.createElement('div');
+            header.className = 'action-card-header';
+            
+            const badge = document.createElement('span');
+            badge.className = `action-category-badge action-cat-${action.category}`;
+            badge.textContent = action.category;
+            
+            const icon = document.createElement('i');
+            icon.className = `fa-solid ${isCommitted ? 'fa-circle-check text-emerald' : 'fa-circle-plus text-dark'}`;
+            
+            header.appendChild(badge);
+            header.appendChild(icon);
 
-            // Bind click event for action toggles
-            const btnCommit = card.querySelector('.btn-commit');
+            // Body
+            const body = document.createElement('div');
+            body.className = 'action-card-body';
+            
+            const title = document.createElement('h4');
+            title.className = 'action-title';
+            title.textContent = action.title;
+            
+            const desc = document.createElement('p');
+            desc.className = 'action-desc';
+            desc.textContent = action.desc;
+            
+            body.appendChild(title);
+            body.appendChild(desc);
+
+            // Footer
+            const footer = document.createElement('div');
+            footer.className = 'action-card-footer';
+            
+            const impactDiv = document.createElement('div');
+            impactDiv.className = 'action-impact';
+            
+            const impactLbl = document.createElement('span');
+            impactLbl.className = 'impact-lbl';
+            impactLbl.textContent = 'Annual Savings';
+            
+            const impactVal = document.createElement('span');
+            impactVal.className = 'impact-val';
+            impactVal.textContent = `-${(action.impact / 1000).toFixed(2)} t CO₂e`;
+            
+            impactDiv.appendChild(impactLbl);
+            impactDiv.appendChild(impactVal);
+
+            const btnCommit = document.createElement('button');
+            btnCommit.className = 'btn-commit';
+            btnCommit.setAttribute('data-action-id', action.id);
+            btnCommit.textContent = isCommitted ? 'Committed' : 'Commit';
             btnCommit.addEventListener('click', () => {
                 toggleActionCommitment(action.id);
             });
+
+            footer.appendChild(impactDiv);
+            footer.appendChild(btnCommit);
+
+            card.appendChild(header);
+            card.appendChild(body);
+            card.appendChild(footer);
 
             actionsGridContainer.appendChild(card);
         });
@@ -760,19 +767,31 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render badges tab
         if (badgesGridContainer) {
-            badgesGridContainer.innerHTML = '';
+            badgesGridContainer.textContent = ''; // Safe clear
             badgesData.forEach(badge => {
                 const isUnlocked = unlockedIds.includes(badge.id);
                 const badgeCard = document.createElement('div');
                 badgeCard.className = `badge-card ${isUnlocked ? 'unlocked' : 'locked'}`;
 
-                badgeCard.innerHTML = `
-                    <div class="badge-card-icon">
-                        <i class="fa-solid ${badge.icon}"></i>
-                    </div>
-                    <h4 class="badge-card-title">${badge.title}</h4>
-                    <p class="badge-card-desc">${badge.desc}</p>
-                `;
+                const iconWrapper = document.createElement('div');
+                iconWrapper.className = 'badge-card-icon';
+                
+                const icon = document.createElement('i');
+                icon.className = `fa-solid ${badge.icon}`;
+                iconWrapper.appendChild(icon);
+
+                const title = document.createElement('h4');
+                title.className = 'badge-card-title';
+                title.textContent = badge.title;
+
+                const desc = document.createElement('p');
+                desc.className = 'badge-card-desc';
+                desc.textContent = badge.desc;
+
+                badgeCard.appendChild(iconWrapper);
+                badgeCard.appendChild(title);
+                badgeCard.appendChild(desc);
+
                 badgesGridContainer.appendChild(badgeCard);
             });
         }
@@ -807,7 +826,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 11. RECALCULATOR MASTER ENGINE
     // -------------------------------------------------------------
     function recalculateAll() {
-        const emissions = calculateEmissions();
+        const emissions = calculateEmissions(state.inputs);
         const currentTotalTonnes = emissions.total / 1000;
 
         // Calculate commitments savings
@@ -914,7 +933,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 tip = '🛍️ <strong>Material goods carry high supply chain footprints</strong>. Consider extending electronics upgrades to 4+ years, buying secondhand clothes, and sorting recycling closely.';
             }
-            lblDynamicTip.innerHTML = tip;
+            setTipText(lblDynamicTip, tip);
         }
 
         // Update Chart visualizations
